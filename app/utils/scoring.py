@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 def compute_features(transactions: pd.DataFrame) -> dict:
-    # Expect columns: date, amount, type ('inflow'/'outflow'), category
+    """Expect columns: date, amount, type ('inflow'/'outflow'), category (optional)."""
     df = transactions.copy()
     if df.empty:
         return {
@@ -15,38 +15,41 @@ def compute_features(transactions: pd.DataFrame) -> dict:
             "mobile_money_signal": False,
         }
 
-    # Ensure correct types
+    # Ensure required columns & dtypes
+    if "category" not in df.columns:
+        df["category"] = ""
     df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0.0)
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df["type"] = df["type"].str.lower()
+    df["date"]   = pd.to_datetime(df["date"],  errors="coerce")
+    df["type"]   = df["type"].astype(str).str.lower()
+    cat_lower    = df["category"].astype(str).str.lower()
 
-    # Monthly inflow / outflow
+    # Monthly aggregates
     df["ym"] = df["date"].dt.to_period("M")
-    inflows = df[df["type"]=="inflow"].groupby("ym")["amount"].sum().astype(float)
-    outflows = df[df["type"]=="outflow"].groupby("ym")["amount"].sum().astype(float)
+    inflows  = df[df["type"] == "inflow"].groupby("ym")["amount"].sum().astype(float)
+    outflows = df[df["type"] == "outflow"].groupby("ym")["amount"].sum().astype(float)
 
-    avg_inflow = float(inflows.mean()) if len(inflows) else 0.0
-    income_volatility = float(inflows.std() / inflows.mean()) if len(inflows) and inflows.mean()!=0 else 1.0
-    total_in = float(df.loc[df["type"]=="inflow","amount"].sum())
-    total_out = float(df.loc[df["type"]=="outflow","amount"].sum())
-    expense_ratio = float(total_out / total_in) if total_in>0 else 1.0
+    avg_inflow        = float(inflows.mean()) if len(inflows) else 0.0
+    income_volatility = float(inflows.std() / inflows.mean()) if len(inflows) and inflows.mean() != 0 else 1.0
+    total_in          = float(df.loc[df["type"] == "inflow",  "amount"].sum())
+    total_out         = float(df.loc[df["type"] == "outflow", "amount"].sum())
+    expense_ratio     = float(total_out / total_in) if total_in > 0 else 1.0
 
-    # Simple overdraft proxy: months where outflow > inflow by 10%
-    overdraft_count = int(sum((outflows.reindex(inflows.index, fill_value=0) > inflows * 1.1)))
+    # Overdraft proxy: months where outflow > inflow by 10%
+    overdraft_count = int((outflows.reindex(inflows.index, fill_value=0) > inflows * 1.1).sum())
 
-    # Alternative signals
-    categories = (df.get("category") or pd.Series(dtype=str)).astype(str).str.lower()
-    remittance_count = int(((categories.str.contains("remittance")) | (categories.str.contains("transfer_international"))).sum())
-    gig_months_active = int((df[df["category"].str.lower().str.contains("gig|upwork|fiverr|delivery|rappi|grab", na=False)]
-                             .groupby("ym")["amount"].sum().shape[0]))
+    # Alternative-data signals
+    remittance_mask   = cat_lower.str.contains(r"(remittance|transfer_international)", regex=True, na=False)
+    gig_mask          = cat_lower.str.contains(r"(gig|upwork|fiverr|delivery|rappi|grab)", regex=True, na=False)
+    mobile_money_mask = cat_lower.str.contains(r"(ecocash|mpesa|m-pesa|momo|zalopay|wallet)", regex=True, na=False)
 
-    # Mobile money signal: if source contains ecocash/mpesa/momo/zalopay in categories or any wallet hint
-    mobile_money_signal = bool(categories.str.contains("ecocash|mpesa|m-pesa|momo|zalopay|wallet", regex=True).any())
+    remittance_count  = int(remittance_mask.sum())
+    gig_months_active = int(df[gig_mask].groupby("ym")["amount"].sum().shape[0])
+    mobile_money_signal = bool(mobile_money_mask.any())
 
     return {
-        "avg_inflow": round(avg_inflow,2),
-        "income_volatility": round(float(income_volatility),2),
-        "expense_ratio": round(float(expense_ratio),2),
+        "avg_inflow": round(avg_inflow, 2),
+        "income_volatility": round(float(income_volatility), 2),
+        "expense_ratio": round(float(expense_ratio), 2),
         "overdraft_count": int(overdraft_count),
         "remittance_count": int(remittance_count),
         "gig_months_active": int(gig_months_active),
@@ -56,7 +59,7 @@ def compute_features(transactions: pd.DataFrame) -> dict:
 def rule_based_score(feats: dict) -> tuple[int, str]:
     score = 50
 
-    # avg_inflow
+    # avg inflow
     if feats["avg_inflow"] >= 800:
         score += 15
     elif feats["avg_inflow"] >= 400:
@@ -92,14 +95,5 @@ def rule_based_score(feats: dict) -> tuple[int, str]:
         score += 4
 
     score = max(0, min(100, score))
-
-    if score >= 86:
-        band = "Prime"
-    elif score >= 70:
-        band = "Green"
-    elif score >= 50:
-        band = "Amber"
-    else:
-        band = "Red"
-
+    band = "Prime" if score >= 86 else "Green" if score >= 70 else "Amber" if score >= 50 else "Red"
     return int(score), band
