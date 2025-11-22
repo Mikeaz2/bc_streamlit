@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 
 
-def render_banklink_page():
+def render_ai_credit_dashboard_page():
     # ---------- LIGHT CUSTOM STYLING ----------
     st.markdown(
         """
@@ -50,6 +51,27 @@ def render_banklink_page():
             border: 1px solid #1f2937;
             margin-bottom: 0.7rem;
         }
+
+        .bc-badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .bc-badge-low {
+            background: #065f46;
+            color: #d1fae5;
+        }
+        .bc-badge-medium {
+            background: #92400e;
+            color: #ffedd5;
+        }
+        .bc-badge-high {
+            background: #7f1d1d;
+            color: #fee2e2;
+        }
         </style>
         """,
         unsafe_allow_html=True
@@ -63,14 +85,14 @@ def render_banklink_page():
 
     with col_text:
         st.markdown(
-            '<div class="bc-header-title">Link Accounts</div>',
+            '<div class="bc-header-title">AI Credit Dashboard</div>',
             unsafe_allow_html=True
         )
         st.markdown(
             """
             <div class="bc-header-subtitle">
-            Connect sandbox bank accounts or upload CSV statements so BC can build a richer,
-            real-time view of your cash flows and credit capacity.
+            See how BC’s AI interprets your linked accounts, income signals, and risk profile
+            to generate a portable, borderless credit limit.
             </div>
             """,
             unsafe_allow_html=True
@@ -78,190 +100,270 @@ def render_banklink_page():
 
     st.markdown("---")
 
-    # We'll reuse this later for showing a summary
-    linked_accounts_data = None
-    csv_df = None
-
-    # ================== STEP 1: CHOOSE DATA SOURCE ==================
+    # ================== PROFILE SNAPSHOT ==================
     with st.container():
         st.markdown('<div class="bc-card-box">', unsafe_allow_html=True)
-
         st.markdown(
-            '<div class="bc-pill">Step 1 · Choose Data Source</div>',
+            '<div class="bc-pill">Profile Snapshot</div>',
             unsafe_allow_html=True
         )
         st.markdown(
-            '<div class="bc-section-caption">Use a sandbox connection for demos, or upload CSV exports from your bank / neobank.</div>',
+            '<div class="bc-section-caption">High-level status of your onboarding and data quality.</div>',
             unsafe_allow_html=True
         )
 
-        source_choice = st.radio(
-            "How would you like to provide account and transaction data?",
-            ["Sandbox demo connection", "Upload CSV file"],
-            horizontal=True
-        )
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            kyc_status = st.selectbox(
+                "KYC status (for demo)",
+                ["Not started", "In review", "Verified"],
+                index=2
+            )
+
+        with col2:
+            accounts_linked = st.number_input(
+                "Accounts linked",
+                min_value=0,
+                max_value=10,
+                value=3
+            )
+
+        with col3:
+            countries_seen = st.number_input(
+                "Countries of income",
+                min_value=1,
+                max_value=10,
+                value=2
+            )
+
+        with col4:
+            months_history = st.number_input(
+                "Months of transaction history",
+                min_value=0,
+                max_value=60,
+                value=12
+            )
 
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.write("")
 
-    # ================== STEP 2A: SANDBOX MODE ==================
-    if source_choice == "Sandbox demo connection":
-        with st.container():
-            st.markdown('<div class="bc-card-box">', unsafe_allow_html=True)
+    # ================== AI INPUTS & SCORE ==================
+    with st.container():
+        st.markdown('<div class="bc-card-box">', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="bc-pill">AI Inputs & Score</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            '<div class="bc-section-caption">Adjust the sliders to see how behavior affects your BC AI credit score and limit.</div>',
+            unsafe_allow_html=True
+        )
+
+        left, right = st.columns([1.2, 1])
+
+        with left:
+            profile_type = st.selectbox(
+                "Profile type",
+                ["International student", "Freelancer / gig worker", "New immigrant", "Remote employee"],
+                index=0
+            )
+
+            monthly_income = st.slider(
+                "Stable monthly income (USD equivalent)",
+                min_value=200,
+                max_value=8000,
+                value=1800,
+                step=100
+            )
+
+            income_volatility = st.slider(
+                "Income volatility (0 = very stable, 100 = very volatile)",
+                min_value=0,
+                max_value=100,
+                value=35
+            )
+
+            utilization = st.slider(
+                "Credit / wallet utilization (%)",
+                min_value=0,
+                max_value=100,
+                value=42
+            )
+
+            missed_payments = st.slider(
+                "Missed / late payments in last 12 months",
+                min_value=0,
+                max_value=10,
+                value=0
+            )
+
+            country_risk = st.selectbox(
+                "Jurisdiction risk (where most of your income flows come from)",
+                ["Low", "Medium", "High"],
+                index=1
+            )
+
+        # ----- SIMPLE "AI" SCORING LOGIC (for demo only) -----
+        base_score = 650
+
+        # Income effect
+        if monthly_income < 800:
+            base_score -= 80
+        elif monthly_income < 1500:
+            base_score -= 40
+        elif monthly_income > 3500:
+            base_score += 30
+        elif monthly_income > 5000:
+            base_score += 50
+
+        # Volatility (higher volatility = lower score)
+        base_score -= (income_volatility * 0.6)
+
+        # Utilization (sweet spot around 20–40%)
+        if utilization < 10:
+            base_score -= 10
+        elif 10 <= utilization <= 40:
+            base_score += 20
+        elif utilization > 80:
+            base_score -= 40
+
+        # Missed payments
+        base_score -= missed_payments * 25
+
+        # Country risk
+        if country_risk == "Low":
+            base_score += 20
+        elif country_risk == "High":
+            base_score -= 30
+
+        # Data depth (months of history + accounts)
+        base_score += min(months_history, 24) * 0.8
+        base_score += min(accounts_linked, 5) * 4
+
+        # KYC bonus
+        if kyc_status == "Verified":
+            base_score += 20
+        elif kyc_status == "In review":
+            base_score += 5
+
+        # Clamp
+        ai_score = int(np.clip(base_score, 300, 900))
+
+        # Risk bucket
+        if ai_score >= 760:
+            risk_level = "Low"
+            badge_class = "bc-badge-low"
+        elif ai_score >= 620:
+            risk_level = "Medium"
+            badge_class = "bc-badge-medium"
+        else:
+            risk_level = "High"
+            badge_class = "bc-badge-high"
+
+        # Recommended limit (simple function of income and score)
+        limit_base = monthly_income * 1.5
+        limit_multiplier = (ai_score - 300) / 600  # 0–1 range
+        recommended_limit = int(limit_base * limit_multiplier)
+
+        with right:
+            st.markdown("#### AI Credit Summary")
+            col_a, col_b = st.columns(2)
+            with col_a:
+                st.metric("BC AI Score", f"{ai_score} / 900")
+            with col_b:
+                st.metric("Suggested BC Limit", f"${recommended_limit:,.0f}")
 
             st.markdown(
-                '<div class="bc-pill">Step 2 · Connect Sandbox Accounts</div>',
-                unsafe_allow_html=True
-            )
-            st.markdown(
-                '<div class="bc-section-caption">Simulate a Plaid-like flow with pre-loaded demo accounts.</div>',
+                f'<span class="bc-badge {badge_class}">Risk level: {risk_level}</span>',
                 unsafe_allow_html=True
             )
 
-            connect_clicked = st.button("🔗 Connect demo accounts")
-
-            if connect_clicked:
-                # Fake sandbox accounts
-                linked_accounts_data = pd.DataFrame(
-                    [
-                        {
-                            "Bank": "BC Demo Bank",
-                            "Account name": "Student Checking",
-                            "Type": "Checking",
-                            "Currency": "USD",
-                            "Balance": 1243.57,
-                        },
-                        {
-                            "Bank": "BC Demo Bank",
-                            "Account name": "Freelance Savings",
-                            "Type": "Savings",
-                            "Currency": "USD",
-                            "Balance": 3120.15,
-                        },
-                        {
-                            "Bank": "GigPay Sandbox",
-                            "Account name": "Gig Wallet",
-                            "Type": "Wallet",
-                            "Currency": "USD",
-                            "Balance": 486.90,
-                        },
-                    ]
-                )
-
-                st.success("✅ Demo accounts linked successfully.")
-                st.dataframe(linked_accounts_data, use_container_width=True)
-
-            else:
-                st.info("Click **Connect demo accounts** to attach sample data for testing.")
-
-            st.markdown("</div>", unsafe_allow_html=True)
-
-    # ================== STEP 2B: CSV MODE ==================
-    else:
-        with st.container():
-            st.markdown('<div class="bc-card-box">', unsafe_allow_html=True)
-
-            st.markdown(
-                '<div class="bc-pill">Step 2 · Upload CSV Statement</div>',
-                unsafe_allow_html=True
-            )
-            st.markdown(
-                '<div class="bc-section-caption">Upload a CSV with transactions (e.g., date, description, amount, category).</div>',
-                unsafe_allow_html=True
+            st.write("")
+            st.caption(
+                "This score is generated by BC’s experimental scoring engine using income stability, "
+                "volatility, utilization, repayment behavior, and jurisdiction risk. "
+                "In production, this would be backed by real ML models and linked accounts."
             )
 
-            uploaded_file = st.file_uploader(
-                "Drag and drop your CSV file here, or browse files",
-                type=["csv"]
-            )
-
-            if uploaded_file is not None:
-                try:
-                    csv_df = pd.read_csv(uploaded_file)
-                    st.success("✅ CSV uploaded and parsed successfully.")
-                    st.write("Preview of your data:")
-                    st.dataframe(csv_df.head(20), use_container_width=True)
-                except Exception as e:
-                    st.error(f"Could not read the CSV file: {e}")
-
-            else:
-                st.info("No file uploaded yet. Please add a CSV file to continue.")
-
-            st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     st.write("")
 
-    # ================== STEP 3: SUMMARY & INSIGHTS ==================
+    # ================== SCENARIO SANDBOX ==================
     with st.container():
         st.markdown('<div class="bc-card-box">', unsafe_allow_html=True)
-
         st.markdown(
-            '<div class="bc-pill">Step 3 · Account Summary & Cash Flow</div>',
+            '<div class="bc-pill">Scenario Sandbox</div>',
             unsafe_allow_html=True
         )
         st.markdown(
-            '<div class="bc-section-caption">BC uses linked data to understand your income stability, spending patterns, and debt capacity.</div>',
+            '<div class="bc-section-caption">Compare your current behavior with a “healthier” scenario and see how your limit could change.</div>',
             unsafe_allow_html=True
         )
 
-        # Sandbox summary
-        if source_choice == "Sandbox demo connection" and linked_accounts_data is not None:
-            total_balance = linked_accounts_data["Balance"].sum()
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("Linked accounts", len(linked_accounts_data))
-            with col2:
-                st.metric("Total balance (USD)", f"${total_balance:,.2f}")
-            with col3:
-                avg_balance = total_balance / len(linked_accounts_data)
-                st.metric("Avg. balance / account", f"${avg_balance:,.2f}")
+        col_now, col_target = st.columns(2)
 
-        # CSV summary
-        elif source_choice == "Upload CSV file" and csv_df is not None:
-            # Try to be flexible with column names
-            cols_lower = {c.lower(): c for c in csv_df.columns}
+        with col_now:
+            st.subheader("Current pattern")
+            st.write(f"• Utilization: **{utilization}%**")
+            st.write(f"• Income volatility: **{income_volatility}/100**")
+            st.write(f"• Missed payments: **{missed_payments}**")
+            st.write(f"• Risk level: **{risk_level}**")
+            st.write(f"• Suggested limit: **${recommended_limit:,.0f}**")
 
-            amount_col = None
-            date_col = None
+        with col_target:
+            st.subheader("Improved pattern (what-if)")
 
-            for key in ["amount", "amt", "transaction_amount"]:
-                if key in cols_lower:
-                    amount_col = cols_lower[key]
-                    break
+            improved_util = st.slider(
+                "Target utilization (%)",
+                min_value=0,
+                max_value=100,
+                value=max(5, min(utilization, 35)),
+                key="improved_util"
+            )
+            improved_vol = st.slider(
+                "Target volatility (0–100)",
+                min_value=0,
+                max_value=100,
+                value=max(0, min(income_volatility, 25)),
+                key="improved_vol"
+            )
+            improved_missed = st.slider(
+                "Target missed payments (next 12 months)",
+                min_value=0,
+                max_value=10,
+                value=0,
+                key="improved_missed"
+            )
 
-            for key in ["date", "transaction_date", "posted_date"]:
-                if key in cols_lower:
-                    date_col = cols_lower[key]
-                    break
+            # Re-score quickly with improved behavior
+            improved_score = base_score  # start from same base before some penalties
+            # Remove old penalties: approximate adjustment
+            improved_score += (income_volatility - improved_vol) * 0.6
+            if improved_util <= 40 and utilization > 40:
+                improved_score += 25
+            improved_score += (missed_payments - improved_missed) * 25
 
-            if amount_col is not None:
-                amounts = pd.to_numeric(csv_df[amount_col], errors="coerce").dropna()
+            improved_score = int(np.clip(improved_score, 300, 900))
+            improved_limit = int(limit_base * ((improved_score - 300) / 600))
 
-                total_inflow = amounts[amounts > 0].sum()
-                total_outflow = amounts[amounts < 0].sum()
-                net_flow = amounts.sum()
+            st.write(f"**AI Score (what-if):** {improved_score} / 900")
+            st.write(f"**Suggested limit (what-if):** ${improved_limit:,.0f}")
 
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Transactions", len(amounts))
-                with col2:
-                    st.metric("Total inflows", f"${total_inflow:,.2f}")
-                with col3:
-                    st.metric("Total outflows", f"${total_outflow:,.2f}")
+            delta_score = improved_score - ai_score
+            delta_limit = improved_limit - recommended_limit
 
-                st.metric("Net cash flow", f"${net_flow:,.2f}")
-
+            if delta_score > 0:
+                st.success(f"Score improvement: +{delta_score} points")
+            elif delta_score < 0:
+                st.warning(f"Score decrease: {delta_score} points")
             else:
-                st.info(
-                    "To compute cash flow, BC expects an **Amount** column in your CSV "
-                    "(e.g., 'amount', 'amt', or 'transaction_amount')."
-                )
-        else:
-            st.info("Once you link sandbox accounts or upload a CSV, BC will show your summary here.")
+                st.info("No change in score.")
 
         st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ---------- CALL THE FUNCTION ----------
-render_banklink_page()
+render_ai_credit_dashboard_page()
