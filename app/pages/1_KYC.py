@@ -1,32 +1,40 @@
 import streamlit as st
 
-def render_kyc_page():
 
+def render_kyc_page():
     # ---------- LIGHT CUSTOM STYLING ----------
     st.markdown(
         """
         <style>
         .main {
-            padding-top: 1.5rem;
+            padding-top: 0.5rem;     /* reduced spacing */
             padding-bottom: 2rem;
         }
 
         .bc-header-title {
             font-size: 1.9rem;
             font-weight: 700;
-            margin-bottom: 0.15rem;
+            margin-top: 0rem;
+            margin-bottom: 0.1rem;
         }
 
         .bc-header-subtitle {
             font-size: 1.05rem;
             color: #A0AEC0;
-            margin-bottom: 0.4rem;
+            margin-top: 0rem;
+            margin-bottom: 1rem;    /* space below subtitle */
         }
 
-        .bc-section-title {
-            font-size: 1.05rem;
+        /* PILL STYLE TITLES */
+        .bc-pill {
+            display: inline-block;
+            background: #111827;
+            padding: 0.35rem 0.85rem;
+            border-radius: 20px;
             font-weight: 600;
-            margin-bottom: 0.25rem;
+            font-size: 0.92rem;
+            border: 1px solid #1f2937;
+            margin-bottom: 0.4rem;
         }
 
         .bc-section-caption {
@@ -38,8 +46,9 @@ def render_kyc_page():
         .bc-card-box {
             background: #0b1220;
             border-radius: 14px;
-            padding: 1rem 1.1rem;
+            padding: 1rem 1rem;
             border: 1px solid #1f2937;
+            margin-bottom: 0.7rem;
         }
         </style>
         """,
@@ -69,12 +78,15 @@ def render_kyc_page():
 
     st.markdown("---")
 
-    # ---------- KYC FORM ----------
+    # ---------- PROGRESS BAR PLACEHOLDER ----------
+    progress_placeholder = st.empty()
+
+    # ================== STEP 1: BASIC IDENTITY ==================
     with st.container():
         st.markdown('<div class="bc-card-box">', unsafe_allow_html=True)
 
         st.markdown(
-            '<div class="bc-section-title">Step 1 · Basic Identity</div>',
+            '<div class="bc-pill">Step 1 · Basic Identity</div>',
             unsafe_allow_html=True
         )
         st.markdown(
@@ -96,12 +108,12 @@ def render_kyc_page():
 
     st.write("")
 
-    # ---------- STEP 2 ----------
+    # ================== STEP 2: GOVERNMENT ID ==================
     with st.container():
         st.markdown('<div class="bc-card-box">', unsafe_allow_html=True)
 
         st.markdown(
-            '<div class="bc-section-title">Step 2 · Government ID</div>',
+            '<div class="bc-pill">Step 2 · Government ID</div>',
             unsafe_allow_html=True
         )
         st.markdown(
@@ -131,12 +143,12 @@ def render_kyc_page():
 
     st.write("")
 
-    # ---------- STEP 3 ----------
+    # ================== STEP 3: ADDRESS & FINANCIAL PROFILE ==================
     with st.container():
         st.markdown('<div class="bc-card-box">', unsafe_allow_html=True)
 
         st.markdown(
-            '<div class="bc-section-title">Step 3 · Address & Financial Profile</div>',
+            '<div class="bc-pill">Step 3 · Address & Financial Profile</div>',
             unsafe_allow_html=True
         )
         st.markdown(
@@ -188,12 +200,12 @@ def render_kyc_page():
 
     st.write("")
 
-    # ---------- CONSENT & SUBMIT ----------
+    # ================== FINAL STEP: CONSENT & SUBMIT ==================
     with st.container():
         st.markdown('<div class="bc-card-box">', unsafe_allow_html=True)
 
         st.markdown(
-            '<div class="bc-section-title">Final Step · Consent & Submit</div>',
+            '<div class="bc-pill">Final Step · Consent & Submit</div>',
             unsafe_allow_html=True
         )
 
@@ -204,15 +216,42 @@ def render_kyc_page():
 
         submitted = st.button("Submit for verification")
 
+        # ---------- SIMPLE COMPLETION LOGIC ----------
+        completed_steps = 0
+        total_steps = 4  # Step1, Step2, Step3, Consent
+
+        # Step 1 considered done if core identity fields are filled
+        if full_name and nationality and residency_country and phone and email:
+            completed_steps += 1
+
+        # Step 2 done if files uploaded
+        if id_doc is not None and selfie is not None and id_number and id_issue_country:
+            completed_steps += 1
+
+        # Step 3 done if address + employment + income filled
+        if address_line and city and postal_code and employment_status and income_range:
+            completed_steps += 1
+
+        # Consent step
+        if agree_terms:
+            completed_steps += 1
+
+        progress = int((completed_steps / total_steps) * 100)
+        progress_placeholder.progress(progress, text=f"KYC completion: {progress}%")
+
+        # ---------- SUBMIT HANDLING ----------
         if submitted:
             if not agree_terms:
                 st.error("Please confirm that the information is accurate and accept the terms to continue.")
             elif not full_name or not email or not id_doc or not selfie:
-                st.warning("Please make sure you filled your name, email, uploaded your ID document and selfie.")
+                st.warning(
+                    "Please make sure you filled your name, email, uploaded your ID document and selfie."
+                )
             else:
                 st.success("✅ KYC submitted. Your profile is now under review. We’ll notify you once it’s verified.")
 
         st.markdown("</div>", unsafe_allow_html=True)
+
 
 # ---------- CALL THE FUNCTION ----------
 render_kyc_page()
