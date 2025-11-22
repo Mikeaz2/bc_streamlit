@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+from components.bc_assistant import render_bc_assistant   # ✅ ADDED
 
 
 def render_ai_credit_dashboard_page():
@@ -502,3 +503,6 @@ def render_ai_credit_dashboard_page():
 
 # ---------- CALL THE FUNCTION ----------
 render_ai_credit_dashboard_page()
+
+# ---------- FLOATING BC ASSISTANT ----------
+render_bc_assistant()   # ✅ ADDED
