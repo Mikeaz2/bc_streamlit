@@ -72,6 +72,17 @@ def render_ai_credit_dashboard_page():
             background: #7f1d1d;
             color: #fee2e2;
         }
+
+        .bc-flag-chip {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            margin-right: 0.3rem;
+            margin-bottom: 0.3rem;
+            border: 1px solid #374151;
+            background: #020617;
+        }
         </style>
         """,
         unsafe_allow_html=True
@@ -210,43 +221,83 @@ def render_ai_credit_dashboard_page():
 
         # Income effect
         if monthly_income < 800:
+            base_income_impact = "Negative"
             base_score -= 80
         elif monthly_income < 1500:
+            base_income_impact = "Slight negative"
             base_score -= 40
-        elif monthly_income > 3500:
-            base_score += 30
         elif monthly_income > 5000:
+            base_income_impact = "Strong positive"
             base_score += 50
+        elif monthly_income > 3500:
+            base_income_impact = "Positive"
+            base_score += 30
+        else:
+            base_income_impact = "Neutral"
 
         # Volatility (higher volatility = lower score)
         base_score -= (income_volatility * 0.6)
+        if income_volatility <= 20:
+            vol_impact = "Positive"
+        elif income_volatility <= 50:
+            vol_impact = "Moderate"
+        else:
+            vol_impact = "Negative"
 
         # Utilization (sweet spot around 20–40%)
         if utilization < 10:
+            util_impact = "Slight negative (under-used)"
             base_score -= 10
         elif 10 <= utilization <= 40:
+            util_impact = "Positive"
             base_score += 20
         elif utilization > 80:
+            util_impact = "Negative (high utilization)"
             base_score -= 40
+        else:
+            util_impact = "Neutral"
 
         # Missed payments
+        if missed_payments == 0:
+            pay_impact = "Positive (clean record)"
+        elif missed_payments <= 2:
+            pay_impact = "Negative"
+        else:
+            pay_impact = "Strong negative"
         base_score -= missed_payments * 25
 
         # Country risk
         if country_risk == "Low":
+            crisk_impact = "Positive"
             base_score += 20
-        elif country_risk == "High":
+        elif country_risk == "Medium":
+            crisk_impact = "Neutral"
+        else:
+            crisk_impact = "Negative"
             base_score -= 30
 
         # Data depth (months of history + accounts)
-        base_score += min(months_history, 24) * 0.8
-        base_score += min(accounts_linked, 5) * 4
+        depth_boost = min(months_history, 24) * 0.8
+        accounts_boost = min(accounts_linked, 5) * 4
+        base_score += depth_boost
+        base_score += accounts_boost
+
+        if months_history < 6:
+            depth_impact = "Thin file (limited history)"
+        elif months_history < 12:
+            depth_impact = "Developing history"
+        else:
+            depth_impact = "Good history depth"
 
         # KYC bonus
         if kyc_status == "Verified":
+            kyc_impact = "Positive"
             base_score += 20
         elif kyc_status == "In review":
+            kyc_impact = "Mild positive"
             base_score += 5
+        else:
+            kyc_impact = "Negative (unverified)"
 
         # Clamp
         ai_score = int(np.clip(base_score, 300, 900))
@@ -267,6 +318,73 @@ def render_ai_credit_dashboard_page():
         limit_multiplier = (ai_score - 300) / 600  # 0–1 range
         recommended_limit = int(limit_base * limit_multiplier)
 
+        # ---------- DECISION EXPLANATION TABLE ----------
+        explanation_rows = [
+            {
+                "Factor": "Stable monthly income",
+                "Your value": f"${monthly_income:,.0f}",
+                "Impact": base_income_impact,
+                "How it affects your limit": "Higher income supports a larger baseline limit and score."
+            },
+            {
+                "Factor": "Income volatility",
+                "Your value": f"{income_volatility}/100",
+                "Impact": vol_impact,
+                "How it affects your limit": "More volatile income reduces confidence in your ability to repay every month."
+            },
+            {
+                "Factor": "Utilization",
+                "Your value": f"{utilization}%",
+                "Impact": util_impact,
+                "How it affects your limit": "Using some of your limit is good, but sustained high utilization signals stress."
+            },
+            {
+                "Factor": "Missed / late payments",
+                "Your value": f"{missed_payments}",
+                "Impact": pay_impact,
+                "How it affects your limit": "Late payments directly reduce score and cut maximum credit we can offer."
+            },
+            {
+                "Factor": "Country / jurisdiction risk",
+                "Your value": country_risk,
+                "Impact": crisk_impact,
+                "How it affects your limit": "Higher-risk jurisdictions reduce maximum exposure; low-risk supports higher limits."
+            },
+            {
+                "Factor": "Data depth",
+                "Your value": f"{months_history} months, {accounts_linked} accounts",
+                "Impact": depth_impact,
+                "How it affects your limit": "More months of history and more accounts linked make the model more confident."
+            },
+            {
+                "Factor": "KYC status",
+                "Your value": kyc_status,
+                "Impact": kyc_impact,
+                "How it affects your limit": "Fully verified profiles can be offered higher, more portable limits."
+            },
+        ]
+        explanation_df = pd.DataFrame(explanation_rows)
+
+        # ---------- FLAGS ----------
+        flags = []
+
+        if income_volatility > 60:
+            flags.append("High income volatility")
+        if months_history < 6:
+            flags.append("Thin file (limited history)")
+        if utilization > 80:
+            flags.append("High utilization risk")
+        if missed_payments > 0:
+            flags.append("Delinquency / late payment risk")
+        if countries_seen > 1:
+            flags.append("Multi-country income advantage")
+        if monthly_income < 800:
+            flags.append("Low stable income")
+        if accounts_linked >= 3:
+            flags.append("Diversified accounts")
+        if kyc_status != "Verified":
+            flags.append("KYC not fully verified")
+
         with right:
             st.markdown("#### AI Credit Summary")
             col_a, col_b = st.columns(2)
@@ -286,6 +404,24 @@ def render_ai_credit_dashboard_page():
                 "volatility, utilization, repayment behavior, and jurisdiction risk. "
                 "In production, this would be backed by real ML models and linked accounts."
             )
+
+            st.write("")
+            st.markdown("**Decision explanation**")
+            st.dataframe(explanation_df, use_container_width=True)
+
+            st.write("")
+            st.markdown("**Key flags detected by BC**")
+            if flags:
+                for f in flags:
+                    st.markdown(
+                        f'<span class="bc-flag-chip">{f}</span>',
+                        unsafe_allow_html=True
+                    )
+            else:
+                st.markdown(
+                    '<span class="bc-flag-chip">No major risk flags · profile looks healthy</span>',
+                    unsafe_allow_html=True
+                )
 
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -338,11 +474,10 @@ def render_ai_credit_dashboard_page():
                 key="improved_missed"
             )
 
-            # Re-score quickly with improved behavior
-            improved_score = base_score  # start from same base before some penalties
-            # Remove old penalties: approximate adjustment
+            # Re-score quickly with improved behavior (approximate)
+            improved_score = ai_score
             improved_score += (income_volatility - improved_vol) * 0.6
-            if improved_util <= 40 and utilization > 40:
+            if utilization > 40 and improved_util <= 40:
                 improved_score += 25
             improved_score += (missed_payments - improved_missed) * 25
 
