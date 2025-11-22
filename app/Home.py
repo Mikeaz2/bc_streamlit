@@ -12,7 +12,7 @@ st.markdown(
     """
     <style>
     .main {
-        padding-top: 1.5rem;
+        padding-top: 1.2rem;
         padding-bottom: 2rem;
     }
 
@@ -54,21 +54,22 @@ st.markdown(
         margin-right: 0.35rem;
         margin-bottom: 0.35rem;
     }
+
+    /* Move the logo UP slightly */
+    img[src*="bc-logo.png"] {
+        margin-top: -14px !important;
+    }
+
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 # ---------- HEADER (LOGO + TITLE LEFT ALIGNED) ----------
-header_logo_col, header_text_col, _ = st.columns([0.6, 3, 0.5])
+header_logo_col, header_text_col, _ = st.columns([0.5, 3, 0.5])
 
 with header_logo_col:
-    st.markdown(
-        """
-        <img src="app/assets/bc-logo.png" width="120" style="margin-top:-12px;">
-        """,
-        unsafe_allow_html=True
-    )
+    st.image("app/assets/bc-logo.png", width=120)
 
 with header_text_col:
     st.markdown('<div class="bc-header-title">BC – Borderless Credit</div>', unsafe_allow_html=True)
