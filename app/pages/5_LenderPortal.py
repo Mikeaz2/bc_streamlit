@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+from components.bc_assistant import render_bc_assistant   # ✅ ADDED
 
 
 def init_borrowers_state():
@@ -454,3 +455,6 @@ def render_lender_portal():
 
 # ---------- CALL ----------
 render_lender_portal()
+
+# ---------- FLOATING BC ASSISTANT ----------
+render_bc_assistant()   # ✅ ADDED
