@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from components.bc_assistant import render_bc_assistant   # ✅ ADDED
 
 
 def render_banklink_page():
@@ -265,3 +266,6 @@ def render_banklink_page():
 
 # ---------- CALL THE FUNCTION ----------
 render_banklink_page()
+
+# ---------- FLOATING BC ASSISTANT ----------
+render_bc_assistant()   # ✅ ADDED
