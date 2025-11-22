@@ -57,7 +57,7 @@ st.markdown(
 
     /* Move the logo UP slightly */
     img[src*="bc-logo.png"] {
-        margin-top: -14px !important;
+        margin-top: -28px !important;
     }
 
     </style>
