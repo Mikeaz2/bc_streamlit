@@ -64,7 +64,7 @@ header_logo_col, header_text_col, _ = st.columns([0.6, 3, 0.5])
 
 with header_logo_col:
     # bigger logo
-    st.image("app/assets/bc-logo.png", width=300)
+    st.image("app/assets/bc-logo.png", width=250)
 
 with header_text_col:
     st.markdown('<div class="bc-header-title">BC – Borderless Credit</div>', unsafe_allow_html=True)
