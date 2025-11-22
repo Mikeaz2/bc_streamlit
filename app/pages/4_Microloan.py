@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
+from components.bc_assistant import render_bc_assistant   # ✅ ADDED
 
 
 def render_microloan_page():
@@ -383,3 +384,6 @@ def render_microloan_page():
 
 # ---------- CALL ----------
 render_microloan_page()
+
+# ---------- FLOATING BC ASSISTANT ----------
+render_bc_assistant()   # ✅ ADDED
