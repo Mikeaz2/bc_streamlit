@@ -1,23 +1,23 @@
 import streamlit as st
-import numpy as np
 import pandas as pd
+import numpy as np
 
 
-def render_microloan_page():
-
-    # ---------- SESSION STATE FOR ACCEPTANCE ----------
-    if "loan_accepted" not in st.session_state:
-        st.session_state["loan_accepted"] = False
-
-    # ---------- STYLE ----------
+def render_ai_credit_dashboard_page():
+    # ---------- LIGHT CUSTOM STYLING ----------
     st.markdown(
         """
         <style>
+        .main {
+            padding-top: 0.5rem;
+            padding-bottom: 2rem;
+        }
+
         .bc-header-title {
             font-size: 1.9rem;
             font-weight: 700;
             margin-top: 0rem;
-            margin-bottom: 0.2rem;
+            margin-bottom: 0.1rem;
         }
 
         .bc-header-subtitle {
@@ -38,48 +38,39 @@ def render_microloan_page():
             margin-bottom: 0.4rem;
         }
 
+        .bc-section-caption {
+            font-size: 0.85rem;
+            color: #A0AEC0;
+            margin-bottom: 0.75rem;
+        }
+
         .bc-card-box {
             background: #0b1220;
-            border-radius: 16px;
-            padding: 1.2rem;
+            border-radius: 14px;
+            padding: 1rem 1rem;
             border: 1px solid #1f2937;
-            margin-bottom: 0.8rem;
+            margin-bottom: 0.7rem;
         }
 
-        .bc-offer-box {
-            background: #0d1729;
-            border-radius: 16px;
-            padding: 1.3rem;
-            border: 1px solid #1e293b;
-            box-shadow: 0 0 20px rgba(0,0,0,0.35);
-            margin-bottom: 0.9rem;
+        .bc-badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
         }
 
-        .bc-badge-approved {
+        .bc-badge-low {
             background: #065f46;
             color: #d1fae5;
-            padding: 0.25rem 0.65rem;
-            border-radius: 999px;
-            font-size: 0.82rem;
-            font-weight: 600;
         }
-
-        .bc-badge-manual {
+        .bc-badge-medium {
             background: #92400e;
             color: #ffedd5;
-            padding: 0.25rem 0.65rem;
-            border-radius: 999px;
-            font-size: 0.82rem;
-            font-weight: 600;
         }
-
-        .bc-badge-denied {
+        .bc-badge-high {
             background: #7f1d1d;
             color: #fee2e2;
-            padding: 0.25rem 0.65rem;
-            border-radius: 999px;
-            font-size: 0.82rem;
-            font-weight: 600;
         }
 
         .bc-flag-chip {
@@ -104,12 +95,15 @@ def render_microloan_page():
         st.image("app/assets/bc-logo.png", width=250)
 
     with col_text:
-        st.markdown('<div class="bc-header-title">Instant Micro-Loan Offer</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="bc-header-title">AI Credit Dashboard</div>',
+            unsafe_allow_html=True
+        )
         st.markdown(
             """
             <div class="bc-header-subtitle">
-            BC’s AI analyzes your cash-flow stability, spending patterns, and credit signals
-            to generate real-time micro-loan offers you can use instantly.
+            See how BC’s AI interprets your linked accounts, income signals, and risk profile
+            to generate a portable, borderless credit limit.
             </div>
             """,
             unsafe_allow_html=True
@@ -117,269 +111,394 @@ def render_microloan_page():
 
     st.markdown("---")
 
-    # ================== STEP 1: USER INPUTS ==================
+    # ================== PROFILE SNAPSHOT ==================
     with st.container():
         st.markdown('<div class="bc-card-box">', unsafe_allow_html=True)
-
-        st.markdown('<div class="bc-pill">Loan Preferences</div>', unsafe_allow_html=True)
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            request_amount = st.slider(
-                "Loan amount requested",
-                min_value=20,
-                max_value=800,
-                value=120,
-                step=10
-            )
-
-            duration_weeks = st.slider(
-                "Repayment duration (weeks)",
-                min_value=2,
-                max_value=24,
-                value=8
-            )
-
-        with col2:
-            repayment_frequency = st.selectbox(
-                "Repayment frequency",
-                ["Weekly", "Bi-Weekly", "Monthly"]
-            )
-
-            purpose = st.selectbox(
-                "Loan purpose",
-                ["Education", "Living expenses", "Travel", "Emergencies", "Other"]
-            )
-
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    st.write("")
-
-    # ================== STEP 2: BC AI SCORE (FAKE DEMO) ==================
-    with st.container():
-        st.markdown('<div class="bc-card-box">', unsafe_allow_html=True)
-        st.markdown('<div class="bc-pill">AI Score Inputs (Demo)</div>', unsafe_allow_html=True)
-
-        col3, col4 = st.columns(2)
-
-        with col3:
-            ai_score = st.slider("BC AI Score (demo)", min_value=300, max_value=900, value=720)
-        with col4:
-            volatility = st.slider("Cash-flow volatility (0–100)", min_value=0, max_value=100, value=30)
-
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    st.write("")
-
-    # ================== STEP 3: AI LOAN DECISION ==================
-    approval_score_cutoff = 630
-    auto_approval_cutoff = 720
-
-    # Risk penalty based on volatility
-    volatility_penalty = volatility * 0.4
-
-    # Final score used for decision
-    final_score = ai_score - volatility_penalty
-
-    if final_score >= auto_approval_cutoff:
-        decision = "Approved"
-        badge_class = "bc-badge-approved"
-    elif final_score >= approval_score_cutoff:
-        decision = "Needs manual review"
-        badge_class = "bc-badge-manual"
-    else:
-        decision = "Declined"
-        badge_class = "bc-badge-denied"
-
-    # APR calculation (simple risk-adjusted)
-    base_apr = 9.5
-    risk_adj = (700 - ai_score) / 20
-    volatility_adj = volatility / 15
-    apr = max(5.9, base_apr + risk_adj + volatility_adj)
-
-    # Max amount offered
-    max_offer = int((final_score - 300) / 600 * 600)
-    max_offer = int(np.clip(max_offer, 30, 600))
-
-    # Align offer with user request
-    approved_amount = max(0, min(request_amount, max_offer))
-
-    # ---------- INTEREST + REPAYMENT CALC ----------
-    if approved_amount > 0 and decision != "Declined":
-        term_years = duration_weeks / 52
-        simple_interest = approved_amount * (apr / 100) * term_years
-        total_repay = approved_amount + simple_interest
-    else:
-        term_years = 0
-        simple_interest = 0
-        total_repay = 0
-
-    # Number of payments based on frequency
-    if repayment_frequency == "Weekly":
-        num_payments = duration_weeks
-        period_label = "Week"
-    elif repayment_frequency == "Bi-Weekly":
-        num_payments = max(1, duration_weeks // 2)
-        period_label = "Bi-week"
-    else:  # Monthly
-        num_payments = max(1, round(duration_weeks / 4))
-        period_label = "Month"
-
-    num_payments = int(max(1, num_payments))
-
-    if approved_amount > 0 and decision != "Declined":
-        payment_per = total_repay / num_payments
-        principal_per = approved_amount / num_payments
-        interest_per = simple_interest / num_payments
-    else:
-        payment_per = principal_per = interest_per = 0
-
-    # Build repayment schedule
-    schedule_rows = []
-    remaining = approved_amount
-
-    for i in range(1, num_payments + 1):
-        if remaining <= 0:
-            principal_i = 0
-        else:
-            principal_i = min(principal_per, remaining)
-        interest_i = interest_per
-        total_i = principal_i + interest_i
-        remaining = max(0, remaining - principal_i)
-
-        schedule_rows.append(
-            {
-                "#": i,
-                "Period": f"{period_label} {i}",
-                "Principal": round(principal_i, 2),
-                "Interest": round(interest_i, 2),
-                "Total payment": round(total_i, 2),
-                "Remaining balance": round(remaining, 2),
-            }
-        )
-
-    schedule_df = pd.DataFrame(schedule_rows)
-
-    # ================== OFFER CARD ==================
-    with st.container():
-        st.markdown('<div class="bc-offer-box">', unsafe_allow_html=True)
-
         st.markdown(
-            f'<span class="{badge_class}">{decision}</span>',
+            '<div class="bc-pill">Profile Snapshot</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            '<div class="bc-section-caption">High-level status of your onboarding and data quality.</div>',
             unsafe_allow_html=True
         )
 
-        st.markdown("### Your BC Micro-Loan Offer")
+        col1, col2, col3, col4 = st.columns(4)
 
-        if approved_amount <= 0 or decision == "Declined":
-            st.write("Based on your current AI score and volatility, BC cannot extend this micro-loan automatically.")
-        else:
-            colA, colB, colC = st.columns(3)
-            with colA:
-                st.metric("Approved amount", f"${approved_amount}")
-            with colB:
-                st.metric("APR", f"{apr:.2f}%")
-            with colC:
-                st.metric("Duration", f"{duration_weeks} weeks")
+        with col1:
+            kyc_status = st.selectbox(
+                "KYC status (for demo)",
+                ["Not started", "In review", "Verified"],
+                index=2
+            )
 
-            st.write(f"**Estimated {repayment_frequency.lower()} payment:** ${payment_per:,.2f}")
+        with col2:
+            accounts_linked = st.number_input(
+                "Accounts linked",
+                min_value=0,
+                max_value=10,
+                value=3
+            )
 
-        st.caption(
-            "Offer is generated by BC’s real-time scoring system using income signals, "
-            "volatility, repayment behavior, and multi-country cash-flow patterns."
-        )
+        with col3:
+            countries_seen = st.number_input(
+                "Countries of income",
+                min_value=1,
+                max_value=10,
+                value=2
+            )
 
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    st.write("")
-
-    # ================== STEP 4: INTEREST BREAKDOWN + SCHEDULE ==================
-    with st.container():
-        st.markdown('<div class="bc-card-box">', unsafe_allow_html=True)
-        st.markdown('<div class="bc-pill">Interest & Repayment Schedule</div>', unsafe_allow_html=True)
-
-        if approved_amount <= 0 or decision == "Declined":
-            st.info("No repayment schedule is generated because this offer is not approved.")
-        else:
-            colX, colY, colZ = st.columns(3)
-            with colX:
-                st.metric("Principal", f"${approved_amount:,.2f}")
-            with colY:
-                st.metric("Interest cost over term", f"${simple_interest:,.2f}")
-            with colZ:
-                st.metric("Total to repay", f"${total_repay:,.2f}")
-
-            st.write("**Repayment schedule**")
-            st.dataframe(schedule_df, use_container_width=True)
-
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    st.write("")
-
-    # ================== STEP 5: FLAGS ==================
-    with st.container():
-        st.markdown('<div class="bc-card-box">', unsafe_allow_html=True)
-        st.markdown('<div class="bc-pill">Flags</div>', unsafe_allow_html=True)
-
-        flags = []
-        if volatility > 60:
-            flags.append("High volatility risk")
-        if ai_score < 600:
-            flags.append("Weak AI score")
-        if request_amount > max_offer:
-            flags.append("Requested amount above safe threshold")
-        if decision == "Needs manual review":
-            flags.append("Requires human verification")
-        if decision == "Approved":
-            flags.append("Profile stable enough for instant approval")
-
-        if flags:
-            for f in flags:
-                st.markdown(
-                    f'<span class="bc-flag-chip">{f}</span>',
-                    unsafe_allow_html=True
-                )
-        else:
-            st.markdown(
-                '<span class="bc-flag-chip">No major risk flags detected</span>',
-                unsafe_allow_html=True
+        with col4:
+            months_history = st.number_input(
+                "Months of transaction history",
+                min_value=0,
+                max_value=60,
+                value=12
             )
 
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.write("")
 
-    # ================== STEP 6: ONE-TAP ACCEPT ==================
+    # ================== AI INPUTS & SCORE ==================
     with st.container():
         st.markdown('<div class="bc-card-box">', unsafe_allow_html=True)
-        st.markdown('<div class="bc-pill">Confirm Micro-Loan</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="bc-pill">AI Inputs & Score</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            '<div class="bc-section-caption">Adjust the sliders to see how behavior affects your BC AI credit score and limit.</div>',
+            unsafe_allow_html=True
+        )
 
-        if decision == "Declined" or approved_amount <= 0:
-            st.warning("This loan cannot be accepted because it was not approved by BC’s AI.")
+        left, right = st.columns([1.2, 1])
+
+        with left:
+            profile_type = st.selectbox(
+                "Profile type",
+                ["International student", "Freelancer / gig worker", "New immigrant", "Remote employee"],
+                index=0
+            )
+
+            monthly_income = st.slider(
+                "Stable monthly income (USD equivalent)",
+                min_value=200,
+                max_value=8000,
+                value=1800,
+                step=100
+            )
+
+            income_volatility = st.slider(
+                "Income volatility (0 = very stable, 100 = very volatile)",
+                min_value=0,
+                max_value=100,
+                value=35
+            )
+
+            utilization = st.slider(
+                "Credit / wallet utilization (%)",
+                min_value=0,
+                max_value=100,
+                value=42
+            )
+
+            missed_payments = st.slider(
+                "Missed / late payments in last 12 months",
+                min_value=0,
+                max_value=10,
+                value=0
+            )
+
+            country_risk = st.selectbox(
+                "Jurisdiction risk (where most of your income flows come from)",
+                ["Low", "Medium", "High"],
+                index=1
+            )
+
+        # ----- SIMPLE "AI" SCORING LOGIC (for demo only) -----
+        base_score = 650
+
+        # Income effect
+        if monthly_income < 800:
+            base_income_impact = "Negative"
+            base_score -= 80
+        elif monthly_income < 1500:
+            base_income_impact = "Slight negative"
+            base_score -= 40
+        elif monthly_income > 5000:
+            base_income_impact = "Strong positive"
+            base_score += 50
+        elif monthly_income > 3500:
+            base_income_impact = "Positive"
+            base_score += 30
         else:
-            accept_clicked = st.button("✅ Accept this loan")
+            base_income_impact = "Neutral"
 
-            if accept_clicked:
-                st.session_state["loan_accepted"] = True
+        # Volatility (higher volatility = lower score)
+        base_score -= (income_volatility * 0.6)
+        if income_volatility <= 20:
+            vol_impact = "Positive"
+        elif income_volatility <= 50:
+            vol_impact = "Moderate"
+        else:
+            vol_impact = "Negative"
 
-            if st.session_state["loan_accepted"]:
-                st.success("✅ Loan accepted successfully.")
-                st.write(
-                    f"You’ve accepted a micro-loan of **${approved_amount:,.2f}** "
-                    f"at **{apr:.2f}% APR** over **{duration_weeks} weeks**."
-                )
-                st.write(
-                    f"Your estimated {repayment_frequency.lower()} payment is **${payment_per:,.2f}**, "
-                    f"for a total repayment of **${total_repay:,.2f}**."
-                )
-                st.caption("In a real deployment, funds would now be disbursed to your chosen wallet or bank account.")
-                st.balloons()
+        # Utilization (sweet spot around 20–40%)
+        if utilization < 10:
+            util_impact = "Slight negative (under-used)"
+            base_score -= 10
+        elif 10 <= utilization <= 40:
+            util_impact = "Positive"
+            base_score += 20
+        elif utilization > 80:
+            util_impact = "Negative (high utilization)"
+            base_score -= 40
+        else:
+            util_impact = "Neutral"
+
+        # Missed payments
+        if missed_payments == 0:
+            pay_impact = "Positive (clean record)"
+        elif missed_payments <= 2:
+            pay_impact = "Negative"
+        else:
+            pay_impact = "Strong negative"
+        base_score -= missed_payments * 25
+
+        # Country risk
+        if country_risk == "Low":
+            crisk_impact = "Positive"
+            base_score += 20
+        elif country_risk == "Medium":
+            crisk_impact = "Neutral"
+        else:
+            crisk_impact = "Negative"
+            base_score -= 30
+
+        # Data depth (months of history + accounts)
+        depth_boost = min(months_history, 24) * 0.8
+        accounts_boost = min(accounts_linked, 5) * 4
+        base_score += depth_boost
+        base_score += accounts_boost
+
+        if months_history < 6:
+            depth_impact = "Thin file (limited history)"
+        elif months_history < 12:
+            depth_impact = "Developing history"
+        else:
+            depth_impact = "Good history depth"
+
+        # KYC bonus
+        if kyc_status == "Verified":
+            kyc_impact = "Positive"
+            base_score += 20
+        elif kyc_status == "In review":
+            kyc_impact = "Mild positive"
+            base_score += 5
+        else:
+            kyc_impact = "Negative (unverified)"
+
+        # Clamp
+        ai_score = int(np.clip(base_score, 300, 900))
+
+        # Risk bucket
+        if ai_score >= 760:
+            risk_level = "Low"
+            badge_class = "bc-badge-low"
+        elif ai_score >= 620:
+            risk_level = "Medium"
+            badge_class = "bc-badge-medium"
+        else:
+            risk_level = "High"
+            badge_class = "bc-badge-high"
+
+        # Recommended limit (simple function of income and score)
+        limit_base = monthly_income * 1.5
+        limit_multiplier = (ai_score - 300) / 600  # 0–1 range
+        recommended_limit = int(limit_base * limit_multiplier)
+
+        # ---------- DECISION EXPLANATION TABLE ----------
+        explanation_rows = [
+            {
+                "Factor": "Stable monthly income",
+                "Your value": f"${monthly_income:,.0f}",
+                "Impact": base_income_impact,
+                "How it affects your limit": "Higher income supports a larger baseline limit and score."
+            },
+            {
+                "Factor": "Income volatility",
+                "Your value": f"{income_volatility}/100",
+                "Impact": vol_impact,
+                "How it affects your limit": "More volatile income reduces confidence in your ability to repay every month."
+            },
+            {
+                "Factor": "Utilization",
+                "Your value": f"{utilization}%",
+                "Impact": util_impact,
+                "How it affects your limit": "Using some of your limit is good, but sustained high utilization signals stress."
+            },
+            {
+                "Factor": "Missed / late payments",
+                "Your value": f"{missed_payments}",
+                "Impact": pay_impact,
+                "How it affects your limit": "Late payments directly reduce score and cut maximum credit we can offer."
+            },
+            {
+                "Factor": "Country / jurisdiction risk",
+                "Your value": country_risk,
+                "Impact": crisk_impact,
+                "How it affects your limit": "Higher-risk jurisdictions reduce maximum exposure; low-risk supports higher limits."
+            },
+            {
+                "Factor": "Data depth",
+                "Your value": f"{months_history} months, {accounts_linked} accounts",
+                "Impact": depth_impact,
+                "How it affects your limit": "More months of history and more accounts linked make the model more confident."
+            },
+            {
+                "Factor": "KYC status",
+                "Your value": kyc_status,
+                "Impact": kyc_impact,
+                "How it affects your limit": "Fully verified profiles can be offered higher, more portable limits."
+            },
+        ]
+        explanation_df = pd.DataFrame(explanation_rows)
+
+        # ---------- FLAGS ----------
+        flags = []
+
+        if income_volatility > 60:
+            flags.append("High income volatility")
+        if months_history < 6:
+            flags.append("Thin file (limited history)")
+        if utilization > 80:
+            flags.append("High utilization risk")
+        if missed_payments > 0:
+            flags.append("Delinquency / late payment risk")
+        if countries_seen > 1:
+            flags.append("Multi-country income advantage")
+        if monthly_income < 800:
+            flags.append("Low stable income")
+        if accounts_linked >= 3:
+            flags.append("Diversified accounts")
+        if kyc_status != "Verified":
+            flags.append("KYC not fully verified")
+
+        with right:
+            st.markdown("#### AI Credit Summary")
+            col_a, col_b = st.columns(2)
+            with col_a:
+                st.metric("BC AI Score", f"{ai_score} / 900")
+            with col_b:
+                st.metric("Suggested BC Limit", f"${recommended_limit:,.0f}")
+
+            st.markdown(
+                f'<span class="bc-badge {badge_class}">Risk level: {risk_level}</span>',
+                unsafe_allow_html=True
+            )
+
+            st.write("")
+            st.caption(
+                "This score is generated by BC’s experimental scoring engine using income stability, "
+                "volatility, utilization, repayment behavior, and jurisdiction risk. "
+                "In production, this would be backed by real ML models and linked accounts."
+            )
+
+            st.write("")
+            st.markdown("**Decision explanation**")
+            st.dataframe(explanation_df, use_container_width=True)
+
+            st.write("")
+            st.markdown("**Key flags detected by BC**")
+            if flags:
+                for f in flags:
+                    st.markdown(
+                        f'<span class="bc-flag-chip">{f}</span>',
+                        unsafe_allow_html=True
+                    )
             else:
-                st.info("Review your offer and repayment schedule above, then tap **Accept this loan** to confirm.")
+                st.markdown(
+                    '<span class="bc-flag-chip">No major risk flags · profile looks healthy</span>',
+                    unsafe_allow_html=True
+                )
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.write("")
+
+    # ================== SCENARIO SANDBOX ==================
+    with st.container():
+        st.markdown('<div class="bc-card-box">', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="bc-pill">Scenario Sandbox</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            '<div class="bc-section-caption">Compare your current behavior with a “healthier” scenario and see how your limit could change.</div>',
+            unsafe_allow_html=True
+        )
+
+        col_now, col_target = st.columns(2)
+
+        with col_now:
+            st.subheader("Current pattern")
+            st.write(f"• Utilization: **{utilization}%**")
+            st.write(f"• Income volatility: **{income_volatility}/100**")
+            st.write(f"• Missed payments: **{missed_payments}**")
+            st.write(f"• Risk level: **{risk_level}**")
+            st.write(f"• Suggested limit: **${recommended_limit:,.0f}**")
+
+        with col_target:
+            st.subheader("Improved pattern (what-if)")
+
+            improved_util = st.slider(
+                "Target utilization (%)",
+                min_value=0,
+                max_value=100,
+                value=max(5, min(utilization, 35)),
+                key="improved_util"
+            )
+            improved_vol = st.slider(
+                "Target volatility (0–100)",
+                min_value=0,
+                max_value=100,
+                value=max(0, min(income_volatility, 25)),
+                key="improved_vol"
+            )
+            improved_missed = st.slider(
+                "Target missed payments (next 12 months)",
+                min_value=0,
+                max_value=10,
+                value=0,
+                key="improved_missed"
+            )
+
+            # Re-score quickly with improved behavior (approximate)
+            improved_score = ai_score
+            improved_score += (income_volatility - improved_vol) * 0.6
+            if utilization > 40 and improved_util <= 40:
+                improved_score += 25
+            improved_score += (missed_payments - improved_missed) * 25
+
+            improved_score = int(np.clip(improved_score, 300, 900))
+            improved_limit = int(limit_base * ((improved_score - 300) / 600))
+
+            st.write(f"**AI Score (what-if):** {improved_score} / 900")
+            st.write(f"**Suggested limit (what-if):** ${improved_limit:,.0f}")
+
+            delta_score = improved_score - ai_score
+            delta_limit = improved_limit - recommended_limit
+
+            if delta_score > 0:
+                st.success(f"Score improvement: +{delta_score} points")
+            elif delta_score < 0:
+                st.warning(f"Score decrease: {delta_score} points")
+            else:
+                st.info("No change in score.")
 
         st.markdown("</div>", unsafe_allow_html=True)
 
 
-# ---------- CALL ----------
-render_microloan_page()
+# ---------- CALL THE FUNCTION ----------
+render_ai_credit_dashboard_page()
