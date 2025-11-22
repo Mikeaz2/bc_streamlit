@@ -1,14 +1,7 @@
 import streamlit as st
 
 def render_kyc_page():
-    # ---------- OPTIONAL: PAGE CONFIG (only if this is a standalone page) ----------
-    st.set_page_config(
-        page_title="BC – KYC & Onboarding",
-        page_icon="app/assets/bc-logo.png",
-        layout="wide"
-    )
-
-    # ---------- LIGHT CUSTOM STYLING (reuse from home, plus a bit extra) ----------
+    # ---------- LIGHT CUSTOM STYLING ----------
     st.markdown(
         """
         <style>
@@ -100,7 +93,7 @@ def render_kyc_page():
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-    st.write("")  # small vertical space
+    st.write("")
 
     with st.container():
         st.markdown('<div class="bc-card-box">', unsafe_allow_html=True)
@@ -216,7 +209,6 @@ def render_kyc_page():
                     "Please make sure you filled your name, email, uploaded your ID document and selfie."
                 )
             else:
-                # Here you would save to your backend / database
                 st.success("✅ KYC submitted. Your profile is now under review. We’ll notify you once it’s verified.")
 
         st.markdown("</div>", unsafe_allow_html=True)
