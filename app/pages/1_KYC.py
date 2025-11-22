@@ -1,5 +1,5 @@
 import streamlit as st
-
+from components.bc_assistant import render_bc_assistant   # ✅ ADDED
 
 def render_kyc_page():
     # ---------- LIGHT CUSTOM STYLING ----------
@@ -252,6 +252,8 @@ def render_kyc_page():
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-
 # ---------- CALL THE FUNCTION ----------
 render_kyc_page()
+
+# ---------- CALL THE FLOATING ASSISTANT (new) ----------
+render_bc_assistant()     # ✅ ADDED
