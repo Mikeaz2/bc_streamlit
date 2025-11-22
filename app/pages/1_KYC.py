@@ -1,6 +1,7 @@
 import streamlit as st
 
 def render_kyc_page():
+
     # ---------- LIGHT CUSTOM STYLING ----------
     st.markdown(
         """
@@ -95,6 +96,7 @@ def render_kyc_page():
 
     st.write("")
 
+    # ---------- STEP 2 ----------
     with st.container():
         st.markdown('<div class="bc-card-box">', unsafe_allow_html=True)
 
@@ -129,6 +131,7 @@ def render_kyc_page():
 
     st.write("")
 
+    # ---------- STEP 3 ----------
     with st.container():
         st.markdown('<div class="bc-card-box">', unsafe_allow_html=True)
 
@@ -205,10 +208,11 @@ def render_kyc_page():
             if not agree_terms:
                 st.error("Please confirm that the information is accurate and accept the terms to continue.")
             elif not full_name or not email or not id_doc or not selfie:
-                st.warning(
-                    "Please make sure you filled your name, email, uploaded your ID document and selfie."
-                )
+                st.warning("Please make sure you filled your name, email, uploaded your ID document and selfie.")
             else:
                 st.success("✅ KYC submitted. Your profile is now under review. We’ll notify you once it’s verified.")
 
         st.markdown("</div>", unsafe_allow_html=True)
+
+# ---------- CALL THE FUNCTION ----------
+render_kyc_page()
